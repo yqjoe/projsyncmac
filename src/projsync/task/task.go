@@ -5,6 +5,7 @@ import (
 	"projsync/cmd"
 	"projsync/confmgr"
 	"strings"
+	//"runtime"
 )
 
 type Task struct {
@@ -32,13 +33,14 @@ func NewTask(projname, taskname string) *Task {
 func (task *Task) Run() {
 	// 连接synctool print svr
 	task.taskprinter = NewTaskPrinter(task.synctoolprintsvraddr)
+	// 关闭printer
+	defer task.taskprinter.Close()
 
 	for _, icmd := range(task.cmdlist) {
 		cmd.ExecCmd(icmd, task.taskprinter)
 	}
 
-	// 关闭printer
-	task.taskprinter.Close()
+	//fmt.Println("goroutine num:", runtime.NumGoroutine())
 }
 
 func (task *Task) SetPutStepFile(file string) {
@@ -65,6 +67,10 @@ func (task *Task) addTaskCmd(cmdconf *confmgr.CmdConf) {
 	switch cmdconf.CmdName {
 	case "winscp":
 		task.addTaskWinScpCmd(cmdconf)
+	case "svn":
+		task.addTaskSvnCmd(cmdconf)
+	case "xcopy":
+		task.addTaskXcopyCmd(cmdconf)
 	default:
 		fmt.Println("cmd not impl:", cmdconf.CmdName)
 	}
@@ -175,4 +181,38 @@ func (task *Task) addTaskWinScpCallStep(scpcmd *cmd.WinScpCmd, stepconf *confmgr
 	}
 
 	scpcmd.AddWinScpStep(callstep)
+}
+
+// svn task
+func (task *Task) addTaskSvnCmd(cmdconf* confmgr.CmdConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	for _, stepconf := range(cmdconf.Step) {
+		svncmd := cmd.NewSvnCmd()
+		svncmd.SetOp(stepconf.StepName)
+		svncmd.SetSvnDir(projconf.Localdir + "\\" + stepconf.Relativedir)
+		svncmd.SetUser(projconf.SvnUser)
+		svncmd.SetPassword(projconf.SvnPassword)
+
+		task.cmdlist = append(task.cmdlist, svncmd)
+	}
+}
+
+// xcopy task
+func (task *Task) addTaskXcopyCmd(cmdconf* confmgr.CmdConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	for _, stepconf := range(cmdconf.Step) {
+		xcopycmd := cmd.NewXcopyCmd()
+		xcopycmd.SetSrcFiles(projconf.Localdir + "\\" + stepconf.Relativedir + "\\" + stepconf.FileName)
+		xcopycmd.SetDstDir(projconf.Localdir + "\\" + stepconf.DstRelativedir)
+
+		task.cmdlist = append(task.cmdlist, xcopycmd)
+	}
 }

@@ -1,6 +1,6 @@
 package cmd
 
-//// Echo Cmd
+// EchoCmd
 type EchoCmd struct {
 	echoStrs []string
 }

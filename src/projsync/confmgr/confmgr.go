@@ -12,6 +12,8 @@ import (
 type StepConf struct {
 	StepName string
 	Relativedir string
+	DstRelativedir string
+	FileName string
 	SyncDirection string
 	Include []string `xml:"IncludeList>Include"`
 	Exclude []string `xml:"ExcludeList>Exclude"`
@@ -37,6 +39,8 @@ type ProjConf struct {
 	Port string
 	Localdir string
 	Remotedir string
+	SvnUser string
+	SvnPassword string
 	Task []TaskConf `xml:"TaskList>Task"`
 }
 

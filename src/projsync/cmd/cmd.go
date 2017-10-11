@@ -1,32 +1,36 @@
 package cmd
 
 import (
-	"bytes"
+	//"bytes"
 	"fmt"
 	"os/exec"
 	"io"
 )
 
-//// ICmd interface
+// ICmd interface
 type ICmd interface {
 	GetCmdName() string
 	GetCmdArgs() []string
 }
 
+// ExecCmd is function of exec windows batch cmd
 func ExecCmd(cmd ICmd, printer io.Writer) {
-	fmt.Println("ExecCmd")
 	execCmd(printer, cmd.GetCmdName(), cmd.GetCmdArgs()...)
 }
 
 func execCmd(printer io.Writer, cmdname string, args ...string) {
-	fmt.Println(args)
+	//fmt.Println(args)
+	//for _, arg := range(args) {
+	//	fmt.Println(arg)
+	//}
+
 	c := exec.Command(cmdname, args...)
-	var cmderr bytes.Buffer
+	//var cmderr bytes.Buffer
 	c.Stdout = printer 
-	c.Stderr = &cmderr
+	//c.Stderr = &cmderr
 
 	if err := c.Run(); err != nil {
-		fmt.Println("Error:", err)
-		fmt.Println("ErrInfo:", cmderr.String())
+		fmt.Printf("Error:%v cmd:%v\n", err, cmdname)
+		//fmt.Println("ErrInfo:", cmderr.String())
 	}
 }

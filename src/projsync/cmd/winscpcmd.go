@@ -27,6 +27,7 @@ func (cmd *WinScpCmd) GetCmdName() string {
 func (cmd *WinScpCmd) GetCmdArgs() []string {
 	args := make([]string, 0)
 	args = append(args, "/command", "option confirm off")
+	//args = append(args, "/command", "option confirm off", "/log=me.log", "/loglevel=1")
 	args = append(args, cmd.genOpenCmd())
 	args = append(args, cmd.genstepsCmd()...)
 	args = append(args, "close", "exit")
@@ -34,7 +35,8 @@ func (cmd *WinScpCmd) GetCmdArgs() []string {
 }
 
 func (cmd *WinScpCmd) genOpenCmd() string {
-	cmdtext := "open " + cmd.user + ":" + cmd.password + "@" + cmd.host + ":" + cmd.port
+	//cmdtext := "open " + cmd.user + ":" + cmd.password + "@" + cmd.host + ":" + cmd.port
+	cmdtext := "open " + cmd.user + ":" + cmd.password + "@" + cmd.host + ":" + cmd.port + " -hostkey=*"
 	return cmdtext
 }
 

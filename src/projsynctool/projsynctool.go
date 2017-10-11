@@ -63,7 +63,7 @@ func main() {
 }
 
 func genLocalAttr() string {
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
 	return (":" + strconv.Itoa(10000+rand.Intn(9999)))
 }
 

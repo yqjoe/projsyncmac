@@ -7,11 +7,12 @@ import (
 )
 
 func main() {
-	fmt.Println("im projsync")
 	if err := confmgr.Init(); err != nil {
 		fmt.Println("confmgr.Init fail")
 		return 
 	}
+
+	fmt.Println("projsync svr running")
 
 	server.RunTaskServer()
 }
