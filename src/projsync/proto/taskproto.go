@@ -11,7 +11,10 @@ type ReqAddTask struct {
 	SyncToolPrintSvrAddr string
 }
 
-type RspAddTask int
+type RspAddTask struct {
+	Ret int
+	Err string
+}
 
 // 输出任务执行信息协议
 type ReqPrintTaskInfo struct {

@@ -9,11 +9,27 @@ import (
 	"projsync/confmgr"
 )
 
+type taskKey struct {
+	ProjectName, TaskName string
+}
+
+type taskMap map[taskKey] *task.Task
+
 type TaskServer struct {
+	currTask  taskMap
 }
 
 func (server *TaskServer) AddTask(req *proto.ReqAddTask, rsp *proto.RspAddTask) error {
+	if server.isTaskExist(req.ProjectName, req.TaskName) {
+		rsp.Ret = -1
+		rsp.Err = "task already exist"
+		return nil
+	}
+
 	onetask := task.NewTask(req.ProjectName, req.TaskName)
+	server.addTaskMap(req.ProjectName, req.TaskName, onetask)
+
+	// TODO 这里需要优化
 	switch req.TaskName {
 		case "savefile":
 			onetask.SetPutStepFile(req.Putstepfile)
@@ -22,13 +38,32 @@ func (server *TaskServer) AddTask(req *proto.ReqAddTask, rsp *proto.RspAddTask) 
 		onetask.SetSyncToolPrintSvrAddr(req.SyncToolPrintSvrAddr)
 	}
 	onetask.InitTaskFromConf()
-
 	onetask.Run()
+
+	server.delTaskMap(req.ProjectName, req.TaskName)
 	return nil
+}
+
+func (server *TaskServer) isTaskExist(projectname, taskname string) bool {
+	key := taskKey{projectname, taskname}
+	if _, ok := server.currTask[key]; ok {
+		return true
+	}
+
+	return false
+}
+
+func (server *TaskServer) addTaskMap(projectname, taskname string, task *task.Task) {
+	server.currTask[taskKey{projectname, taskname}] = task
+}
+
+func (server *TaskServer) delTaskMap(projectname, taskname string) {
+	delete(server.currTask, taskKey{projectname, taskname})
 }
 
 func RunTaskServer() {
 	tasksvr := new(TaskServer)
+	tasksvr.currTask = make(taskMap)
 	svr := rpc.NewServer()
 	svr.Register(tasksvr)
 
@@ -37,5 +72,9 @@ func RunTaskServer() {
 		fmt.Println("Listen fail")
 		return
 	}
+
+	taskauto := NewTaskAuto(tasksvr)
+	taskauto.GoServe()
+
 	svr.Accept(l)
 }

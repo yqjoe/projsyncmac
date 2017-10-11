@@ -50,15 +50,35 @@ func main() {
 
 	var rsp proto.RspAddTask
 	if conf.TaskPrinter == "yes" {
-		req.SyncToolPrintSvrAddr = genLocalAttr()
-		client.Go("TaskServer.AddTask", req, &rsp, nil)
 		closechan := make(chan int, 1)
+
+		req.SyncToolPrintSvrAddr = genLocalAttr()
+		atcall := client.Go("TaskServer.AddTask", req, &rsp, nil)
+
+		//  wait remote call goroutine
+		go func() {
+			rspcall := <-atcall.Done
+			if rspcall.Error != nil {
+				closechan <- 1
+				return
+			}
+
+			if rsp.Ret != 0 {
+				fmt.Println("add task fail, err:", rsp.Err)
+				closechan <- 1
+			}
+		}()
+
+		// printersvr goroutine
 		printersvr := server.NewPrinterServer(req.SyncToolPrintSvrAddr, closechan)
 		go printersvr.Serve()
+
+		// close
 		<-closechan
 	} else { // no
 		req.SyncToolPrintSvrAddr = ""
-		client.Call("TaskServer.AddTask", req, &rsp)
+		//client.Call("TaskServer.AddTask", req, &rsp)
+		client.Go("TaskServer.AddTask", req, &rsp, nil)
 	}
 }
 
@@ -70,6 +90,7 @@ func genLocalAttr() string {
 func initReqAddTask(req *proto.ReqAddTask, projectname, taskname string, args []string) error {
 	req.ProjectName = projectname
 	req.TaskName = taskname
+	// TODO 这里需要优化
 	switch taskname {
 	case "savefile":
 		if len(args) < 4 {

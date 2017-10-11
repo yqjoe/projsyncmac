@@ -1,0 +1,69 @@
+package server
+
+import (
+	"projsync/confmgr"
+	"projsync/proto"
+	"time"
+)
+
+type taskTime struct {
+	projectname, taskname string
+	lastdotimestamp       int64
+	autodocircle          int
+}
+
+type taskTimeList []taskTime
+
+type TaskAuto struct {
+	timelist taskTimeList
+
+	// tasksvr
+	tasksvr *TaskServer
+}
+
+func NewTaskAuto(tasksvr *TaskServer) *TaskAuto {
+	return &TaskAuto{make(taskTimeList, 0), tasksvr}
+}
+
+func (auto *TaskAuto) GoServe() {
+	// 初始化
+	auto.init()
+
+	go func() {
+	    for {
+		    nowtime := time.Now().Unix()
+		    for index, tasktime := range auto.timelist {
+			    if nowtime <= tasktime.lastdotimestamp+int64(tasktime.autodocircle*60) {
+				    continue
+			    }
+
+			    tasktime.lastdotimestamp = nowtime
+				auto.timelist[index] = tasktime
+
+			    // addtask
+				auto.addTask(tasktime.projectname, tasktime.taskname)
+		    }
+
+		    time.Sleep(5 * time.Second)
+	    }
+	}()
+}
+
+func (auto *TaskAuto) addTask(projectname, taskname string) {
+	req := proto.ReqAddTask{}
+	req.ProjectName = projectname
+	req.TaskName = taskname
+	rsp := proto.RspAddTask{}
+	go auto.tasksvr.AddTask(&req, &rsp)
+}
+
+func (auto *TaskAuto) init() {
+	for projectname, projconf := range confmgr.ConfObj.ProjectMap {
+		for _, taskconf := range projconf.Task {
+			if taskconf.AutoDoTaskCircle > 0 {
+				tasktime := taskTime{projectname, taskconf.TaskName, time.Now().Unix(), taskconf.AutoDoTaskCircle}
+				auto.timelist = append(auto.timelist, tasktime)
+			}
+		}
+	}
+}

@@ -28,6 +28,7 @@ type CmdConf struct {
 type TaskConf struct {
 	TaskName string
 	TaskPrinter string
+	AutoDoTaskCircle int
 	Cmd []CmdConf `xml:"CmdList>Cmd"`
 }
 

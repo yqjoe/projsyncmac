@@ -62,10 +62,10 @@ func NewTaskPrinter(printersvraddr string) *TaskPrinter {
 
 func (printer *TaskPrinter) Write(p []byte) (n int, err error) {
 	if printer.client != nil {
-		//fmt.Printf("%v", string(p))
-	//} else {
 		printer.buffer <- msgPack{msgIDContent, string(p)}
-	}
+	} //else {
+		//fmt.Printf("%v", string(p))
+	//}
 	return len(p), nil
 }
 
