@@ -1,56 +1,59 @@
 package confmgr
 
 import (
-	"fmt"
-	"strconv"
-	"github.com/robfig/config"
+	//"time"
 	"encoding/xml"
-	"os"
+	"fmt"
+	"github.com/robfig/config"
 	"io/ioutil"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
 )
 
 type StepConf struct {
-	StepName string
-	Relativedir string
+	StepName       string
+	Relativedir    string
 	DstRelativedir string
-	FileName string
-	SyncDirection string
-	Include []string `xml:"IncludeList>Include"`
-	Exclude []string `xml:"ExcludeList>Exclude"`
-	ShellCmd []string `xml:"ShellCmdList>ShellCmd"`
+	FileName       string
+	SyncDirection  string
+	Include        []string `xml:"IncludeList>Include"`
+	Exclude        []string `xml:"ExcludeList>Exclude"`
+	ShellCmd       []string `xml:"ShellCmdList>ShellCmd"`
 }
 
 type CmdConf struct {
 	CmdName string
-	Step []StepConf `xml:"StepList>Step"`
+	Step    []StepConf `xml:"StepList>Step"`
 }
 
 type TaskConf struct {
-	TaskName string
-	TaskPrinter string
+	TaskName         string
+	TaskPrinter      string
 	AutoDoTaskCircle int
-	Cmd []CmdConf `xml:"CmdList>Cmd"`
+	Cmd              []CmdConf `xml:"CmdList>Cmd"`
 }
 
 type ProjConf struct {
-	Projectname string 
-	User string
-	Password string
-	Host string
-	Port string
-	Localdir string
-	Remotedir string
-	SvnUser string
+	Projectname string
+	User        string
+	Password    string
+	Host        string
+	Port        string
+	Localdir    string
+	Remotedir   string
+	SvnUser     string
 	SvnPassword string
-	Task []TaskConf `xml:"TaskList>Task"`
+	Task        []TaskConf `xml:"TaskList>Task"`
 }
 
-type ProjConfMap map[string] ProjConf
+type ProjConfMap map[string] *ProjConf
 
 type ConfMgr struct {
-	ProjectCnt int
+	ProjectCnt     int
 	TaskServerPort int
-	ProjectMap ProjConfMap
+	ProjectMap     ProjConfMap
 }
 
 const (
@@ -132,7 +135,9 @@ func Init() error {
 			return um_err
 		}
 
-		ConfObj.ProjectMap[projectname] = ProjectConfObj
+		ConfObj.ProjectMap[ProjectConfObj.Projectname] = &ProjectConfObj
+
+		formatConf(&ProjectConfObj)
 	}
 
 	return nil
@@ -144,7 +149,7 @@ func GetProjectConf(projectname string) *ProjConf {
 		return nil
 	}
 
-	return &projectconf
+	return projectconf
 }
 
 func GetTaskConf(projectname, taskname string) *TaskConf {
@@ -153,7 +158,7 @@ func GetTaskConf(projectname, taskname string) *TaskConf {
 		return nil
 	}
 
-	for _, task := range(projectconf.Task) {
+	for _, task := range projectconf.Task {
 		if task.TaskName == taskname {
 			return &task
 		}
@@ -164,4 +169,36 @@ func GetTaskConf(projectname, taskname string) *TaskConf {
 
 func GetTaskServerAddr() string {
 	return (":" + strconv.Itoa(ConfObj.TaskServerPort))
+}
+
+func formatConf(projconf *ProjConf) {
+	repStrMap := make(map[string] string, 0)
+	repStrMap["${Projectname}"] = projconf.Projectname
+	repStrMap["${User}"] = projconf.User
+	recurseRftObj(reflect.ValueOf(projconf), repStrMap)
+}
+
+func recurseRftObj(value reflect.Value, repStrMap map[string] string) {
+	switch value.Kind() {
+	case reflect.Ptr:
+		recurseRftObj(value.Elem(), repStrMap)
+	case reflect.Struct:
+		for i := 0; i < value.NumField(); i++ {
+			recurseRftObj(value.Field(i), repStrMap)	
+		}
+	case reflect.Slice:
+		for i:= 0; i < value.Len(); i++ {
+			recurseRftObj(value.Index(i), repStrMap)
+		}
+	case reflect.String:
+		value.SetString(replaceStr(value.String(), repStrMap))
+	}
+}
+
+func replaceStr(str string, repStrMap map[string] string) string {
+	for key, value := range(repStrMap) {
+		str = strings.Replace(str, key, value, -1)
+	}
+
+	return str
 }
