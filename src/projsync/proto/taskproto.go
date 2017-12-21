@@ -3,7 +3,7 @@ package proto
 // 加任务协议
 type ReqAddTask struct {
 	ProjectName string
-	TaskName string
+	TaskName    string
 
 	Putstepfile string // winscp put 命令 同步的文件，本地文件的全路径
 
@@ -26,3 +26,22 @@ type RspPrintTaskInfo int
 // 关闭printersvr
 type ReqClosePrinterSvr int
 type RspClosePrinterSvr int
+
+type ReqGetAutoClose struct {
+	ProjectName string
+}
+
+type RspGetAutoClose struct {
+	ProjectName string
+	AutoClose   bool
+}
+
+type ReqSetAutoClose struct {
+	ProjectName string
+	AutoClose   bool
+}
+
+type RspSetAutoClose struct {
+	Ret int
+	Err string
+}

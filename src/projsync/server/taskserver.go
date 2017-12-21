@@ -1,22 +1,24 @@
 package server
 
 import (
-	"net/rpc"
-	"net"
 	"fmt"
+	"net"
+	"net/rpc"
+	"projsync/confmgr"
 	"projsync/proto"
 	"projsync/task"
-	"projsync/confmgr"
 )
 
 type taskKey struct {
 	ProjectName, TaskName string
 }
 
-type taskMap map[taskKey] *task.Task
+type taskMap map[taskKey]*task.Task
 
 type TaskServer struct {
-	currTask  taskMap
+	currTask taskMap
+
+	taskauto *TaskAuto
 }
 
 func (server *TaskServer) AddTask(req *proto.ReqAddTask, rsp *proto.RspAddTask) error {
@@ -31,8 +33,8 @@ func (server *TaskServer) AddTask(req *proto.ReqAddTask, rsp *proto.RspAddTask) 
 
 	// TODO 这里需要优化
 	switch req.TaskName {
-		case "savefile":
-			onetask.SetPutStepFile(req.Putstepfile)
+	case "savefile":
+		onetask.SetPutStepFile(req.Putstepfile)
 	}
 	if len(req.SyncToolPrintSvrAddr) > 0 {
 		onetask.SetSyncToolPrintSvrAddr(req.SyncToolPrintSvrAddr)
@@ -41,6 +43,17 @@ func (server *TaskServer) AddTask(req *proto.ReqAddTask, rsp *proto.RspAddTask) 
 	onetask.Run()
 
 	server.delTaskMap(req.ProjectName, req.TaskName)
+	return nil
+}
+
+func (server *TaskServer) GetAutoClose(req *proto.ReqGetAutoClose, rsp *proto.RspGetAutoClose) error {
+	rsp.ProjectName = req.ProjectName
+	rsp.AutoClose = server.taskauto.GetAutoClose(req.ProjectName)
+	return nil
+}
+
+func (server *TaskServer) SetAutoClose(req *proto.ReqSetAutoClose, rsp *proto.RspSetAutoClose) error {
+	server.taskauto.SetAutoClose(req.ProjectName, req.AutoClose)
 	return nil
 }
 
@@ -75,6 +88,7 @@ func RunTaskServer() {
 
 	taskauto := NewTaskAuto(tasksvr)
 	taskauto.GoServe()
+	tasksvr.taskauto = taskauto
 
 	svr.Accept(l)
 }

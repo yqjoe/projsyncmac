@@ -19,10 +19,14 @@ type TaskAuto struct {
 
 	// tasksvr
 	tasksvr *TaskServer
+
+	// projectname to autoclose map
+	// 是否关闭自动任务
+	autoclosemap map[string]bool
 }
 
 func NewTaskAuto(tasksvr *TaskServer) *TaskAuto {
-	return &TaskAuto{make(taskTimeList, 0), tasksvr}
+	return &TaskAuto{make(taskTimeList, 0), tasksvr, make(map[string]bool)}
 }
 
 func (auto *TaskAuto) GoServe() {
@@ -30,23 +34,40 @@ func (auto *TaskAuto) GoServe() {
 	auto.init()
 
 	go func() {
-	    for {
-		    nowtime := time.Now().Unix()
-		    for index, tasktime := range auto.timelist {
-			    if nowtime <= tasktime.lastdotimestamp+int64(tasktime.autodocircle*60) {
-				    continue
-			    }
+		for {
+			nowtime := time.Now().Unix()
+			for index, tasktime := range auto.timelist {
+				autoclose, ok := auto.autoclosemap[tasktime.projectname]
+				if ok && autoclose == true {
+					continue
+				}
 
-			    tasktime.lastdotimestamp = nowtime
+				if nowtime <= tasktime.lastdotimestamp+int64(tasktime.autodocircle*60) {
+					continue
+				}
+
+				tasktime.lastdotimestamp = nowtime
 				auto.timelist[index] = tasktime
 
-			    // addtask
+				// addtask
 				auto.addTask(tasktime.projectname, tasktime.taskname)
-		    }
-
-		    time.Sleep(5 * time.Second)
-	    }
+			}
+			time.Sleep(5 * time.Second)
+		}
 	}()
+}
+
+func (auto *TaskAuto) SetAutoClose(projectname string, autoclose bool) {
+	auto.autoclosemap[projectname] = autoclose
+}
+
+func (auto *TaskAuto) GetAutoClose(projectname string) bool {
+	autoclose, ok := auto.autoclosemap[projectname]
+	if ok {
+		return autoclose
+	}
+
+	return false
 }
 
 func (auto *TaskAuto) addTask(projectname, taskname string) {
@@ -65,5 +86,6 @@ func (auto *TaskAuto) init() {
 				auto.timelist = append(auto.timelist, tasktime)
 			}
 		}
+		auto.autoclosemap[projectname] = false
 	}
 }

@@ -27,58 +27,98 @@ func main() {
 
 	fmt.Println("tool start:", os.Args)
 
-	if len(os.Args) < 3 {
-		fmt.Printf("Usage:%v projectname taskname", os.Args[0])
+	if len(os.Args) < 4 {
+		fmt.Printf("Usage:%v projectname optype taskname", os.Args[0])
 		return
 	}
 
 	projectname := os.Args[1]
-	taskname := os.Args[2]
+	optype := os.Args[2]
 
-	conf := confmgr.GetTaskConf(projectname, taskname)
-	if conf == nil {
-		fmt.Println("ProjectName or TaskName not impl")
-		return
-	}
-
-	// Add Task
-	req := &proto.ReqAddTask{}
-	err = initReqAddTask(req, projectname, taskname, os.Args)
-	if err != nil {
-		fmt.Println("err:", err.Error())
-	}
-
-	var rsp proto.RspAddTask
-	if conf.TaskPrinter == "yes" {
-		closechan := make(chan int, 1)
-
-		req.SyncToolPrintSvrAddr = genLocalAttr()
-		atcall := client.Go("TaskServer.AddTask", req, &rsp, nil)
-
-		//  wait remote call goroutine
-		go func() {
-			rspcall := <-atcall.Done
-			if rspcall.Error != nil {
-				closechan <- 1
-				return
+	if optype == "conf" {
+		confname := os.Args[3]
+		if confname == "getautoclose" {
+			req := &proto.ReqGetAutoClose{}
+			req.ProjectName = projectname
+			var rsp proto.RspGetAutoClose
+			err := client.Call("TaskServer.GetAutoClose", req, &rsp)
+			if err != nil {
+				fmt.Println("err:", err.Error())
+			} else {
+				fmt.Println("autoclose:", rsp.AutoClose)
 			}
-
-			if rsp.Ret != 0 {
-				fmt.Println("add task fail, err:", rsp.Err)
-				closechan <- 1
+		} else if confname == "openautoclose" {
+			req := &proto.ReqSetAutoClose{}
+			req.ProjectName = projectname
+			req.AutoClose = true
+			var rsp proto.RspSetAutoClose
+			err := client.Call("TaskServer.SetAutoClose", req, &rsp)
+			if err != nil {
+				fmt.Println("openautoclose fail")
+			} else {
+				fmt.Println("openautoclose succ")
 			}
-		}()
+		} else if confname == "closeautoclose" {
+			req := &proto.ReqSetAutoClose{}
+			req.ProjectName = projectname
+			req.AutoClose = false
+			var rsp proto.RspSetAutoClose
+			err := client.Call("TaskServer.SetAutoClose", req, &rsp)
+			if err != nil {
+				fmt.Println("openautoclose fail")
+			} else {
+				fmt.Println("openautoclose succ")
+			}
+		}
+	} else if optype == "task" {
+		taskname := os.Args[3]
+		conf := confmgr.GetTaskConf(projectname, taskname)
+		if conf == nil {
+			fmt.Println("ProjectName or TaskName not impl")
+			return
+		}
 
-		// printersvr goroutine
-		printersvr := server.NewPrinterServer(req.SyncToolPrintSvrAddr, closechan)
-		go printersvr.Serve()
+		// Add Task
+		req := &proto.ReqAddTask{}
+		err = initReqAddTask(req, projectname, taskname, os.Args)
+		if err != nil {
+			fmt.Println("err:", err.Error())
+		}
 
-		// close
-		<-closechan
-	} else { // no
-		req.SyncToolPrintSvrAddr = ""
-		//client.Call("TaskServer.AddTask", req, &rsp)
-		client.Go("TaskServer.AddTask", req, &rsp, nil)
+		var rsp proto.RspAddTask
+		if conf.TaskPrinter == "yes" {
+			closechan := make(chan int, 1)
+
+			req.SyncToolPrintSvrAddr = genLocalAttr()
+			atcall := client.Go("TaskServer.AddTask", req, &rsp, nil)
+
+			//  wait remote call goroutine
+			go func() {
+				rspcall := <-atcall.Done
+				if rspcall.Error != nil {
+					closechan <- 1
+					return
+				}
+
+				if rsp.Ret != 0 {
+					fmt.Println("add task fail, err:", rsp.Err)
+					closechan <- 1
+				}
+			}()
+
+			// printersvr goroutine
+			printersvr := server.NewPrinterServer(req.SyncToolPrintSvrAddr, closechan)
+			go printersvr.Serve()
+
+			// close
+			<-closechan
+		} else { // no
+			req.SyncToolPrintSvrAddr = ""
+			//client.Call("TaskServer.AddTask", req, &rsp)
+			client.Go("TaskServer.AddTask", req, &rsp, nil)
+		}
+	} else {
+		fmt.Printf("Wrong optype")
 	}
 }
 
@@ -93,10 +133,10 @@ func initReqAddTask(req *proto.ReqAddTask, projectname, taskname string, args []
 	// TODO 这里需要优化
 	switch taskname {
 	case "savefile":
-		if len(args) < 4 {
+		if len(args) < 5 {
 			return errors.New("Less Args")
 		}
-		req.Putstepfile = args[3]
+		req.Putstepfile = args[4]
 	}
 	return nil
 }
