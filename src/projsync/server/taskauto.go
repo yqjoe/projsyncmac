@@ -70,6 +70,20 @@ func (auto *TaskAuto) GetAutoClose(projectname string) bool {
 	return false
 }
 
+func (auto *TaskAuto) GetAutoInfo(projectname string) ([]proto.AutoInfo, bool) {
+	autoinfoarray := make([]proto.AutoInfo, 0)
+	for _, tasktime := range auto.timelist {
+		if tasktime.projectname != projectname {
+			continue
+		}
+
+		autoinfo := proto.AutoInfo{tasktime.taskname, tasktime.autodocircle, tasktime.lastdotimestamp}
+		autoinfoarray = append(autoinfoarray, autoinfo)
+	}
+
+	return autoinfoarray, auto.autoclosemap[projectname]
+}
+
 func (auto *TaskAuto) addTask(projectname, taskname string) {
 	req := proto.ReqAddTask{}
 	req.ProjectName = projectname

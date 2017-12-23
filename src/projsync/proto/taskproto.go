@@ -45,3 +45,19 @@ type RspSetAutoClose struct {
 	Ret int
 	Err string
 }
+
+type ReqAutoInfo struct {
+	ProjectName string
+}
+
+type AutoInfo struct {
+	TaskName        string
+	AutoCircle      int
+	LastDoTimestamp int64
+}
+
+type RspAutoInfo struct {
+	ProjectName   string
+	AutoInfoArray []AutoInfo
+	AutoClose     bool
+}

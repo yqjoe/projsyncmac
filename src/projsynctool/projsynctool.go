@@ -69,6 +69,20 @@ func main() {
 			} else {
 				fmt.Println("openautoclose succ")
 			}
+		} else if confname == "getautoinfo" {
+			req := &proto.ReqAutoInfo{}
+			req.ProjectName = projectname
+			var rsp proto.RspAutoInfo
+			err := client.Call("TaskServer.GetAutoInfo", req, &rsp)
+			if err != nil {
+				fmt.Println("getautoinfo fail")
+			} else {
+				fmt.Println("project[", rsp.ProjectName, "] AutoClose[", rsp.AutoClose, "] AutoLen[", len(rsp.AutoInfoArray), "]")
+				for _, autoinfo := range rsp.AutoInfoArray {
+					fmt.Println("task[", autoinfo.TaskName, "] Circle[", autoinfo.AutoCircle,
+						"Minute] LastDoAutoStamp[", time.Unix(autoinfo.LastDoTimestamp, 0).String(), "]")
+				}
+			}
 		}
 	} else if optype == "task" {
 		taskname := os.Args[3]

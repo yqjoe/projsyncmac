@@ -57,6 +57,12 @@ func (server *TaskServer) SetAutoClose(req *proto.ReqSetAutoClose, rsp *proto.Rs
 	return nil
 }
 
+func (server *TaskServer) GetAutoInfo(req *proto.ReqAutoInfo, rsp *proto.RspAutoInfo) error {
+	rsp.ProjectName = req.ProjectName
+	rsp.AutoInfoArray, rsp.AutoClose = server.taskauto.GetAutoInfo(req.ProjectName)
+	return nil
+}
+
 func (server *TaskServer) isTaskExist(projectname, taskname string) bool {
 	key := taskKey{projectname, taskname}
 	if _, ok := server.currTask[key]; ok {
