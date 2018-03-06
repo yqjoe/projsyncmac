@@ -7,10 +7,10 @@ type IWinScpStep interface {
 
 ///// WinScpCmd
 type WinScpCmd struct {
-	user string
+	user     string
 	password string
-	host string
-	port string
+	host     string
+	port     string
 
 	// winscp step
 	steps []IWinScpStep
@@ -36,13 +36,13 @@ func (cmd *WinScpCmd) GetCmdArgs() []string {
 
 func (cmd *WinScpCmd) genOpenCmd() string {
 	//cmdtext := "open " + cmd.user + ":" + cmd.password + "@" + cmd.host + ":" + cmd.port
-	cmdtext := "open " + cmd.user + ":" + cmd.password + "@" + cmd.host + ":" + cmd.port + " -hostkey=*"
+	cmdtext := "open " + cmd.user + ":" + cmd.password + "@" + cmd.host + ":" + cmd.port + " -hostkey=*" + " -timeout=100"
 	return cmdtext
 }
 
 func (cmd *WinScpCmd) genstepsCmd() []string {
 	args := make([]string, 0)
-	for _, IStep := range(cmd.steps) {
+	for _, IStep := range cmd.steps {
 		args = append(args, IStep.GetStepArgs()...)
 	}
 	return args
@@ -53,7 +53,7 @@ func (cmd *WinScpCmd) SetUser(user string) {
 }
 
 func (cmd *WinScpCmd) SetPassword(password string) {
-	cmd.password = password  
+	cmd.password = password
 }
 
 func (cmd *WinScpCmd) SetHost(host string) {
@@ -70,7 +70,7 @@ func (cmd *WinScpCmd) AddWinScpStep(step IWinScpStep) {
 
 //// WinScpStepPutFile
 type WinScpStepPutFile struct {
-	localfile string
+	localfile  string
 	remotefile string
 }
 
@@ -94,20 +94,21 @@ func (step *WinScpStepPutFile) GetStepArgs() []string {
 
 //// WinScpStepSync
 type WinScpSyncDirection int
+
 const (
 	WIN_SCP_SYNC_DIRECTION_LOCAL_TO_REMOTE WinScpSyncDirection = 1
 	WIN_SCP_SYNC_DIRECTION_REMOTE_TO_LOCAL WinScpSyncDirection = 2
 )
 
 type WinScpStepSync struct {
-	localdir string
+	localdir  string
 	remotedir string
-	
+
 	// SyncDirect
 	syncdirection WinScpSyncDirection
 
 	// include file/dir, support file suffix
-	include []string	
+	include []string
 	// exclude file/dir, support file suffix
 	exclude []string
 }
@@ -133,10 +134,10 @@ func (step *WinScpStepSync) SetDirection(direction WinScpSyncDirection) {
 func (step *WinScpStepSync) GetStepArgs() []string {
 	args := make([]string, 0)
 
-	// include 
+	// include
 	if len(step.include) > 0 {
 		option := ""
-		for _, include := range(step.include) {
+		for _, include := range step.include {
 			if len(option) > 0 {
 				option += (";" + include)
 			} else {
@@ -149,8 +150,8 @@ func (step *WinScpStepSync) GetStepArgs() []string {
 	// exclude
 	if len(step.exclude) > 0 {
 		option := ""
-		for _, exclude := range(step.exclude) {
-			if len(option) > 0 { 
+		for _, exclude := range step.exclude {
+			if len(option) > 0 {
 				option += (";" + exclude)
 			} else {
 				option += ("option exclude " + exclude)
@@ -193,7 +194,7 @@ func NewWinScpStepCall() *WinScpStepCall {
 func (step *WinScpStepCall) GetStepArgs() []string {
 	args := make([]string, 0)
 	cmdtext := ""
-	for _, shellcmd := range(step.shellcmd) {
+	for _, shellcmd := range step.shellcmd {
 		if len(cmdtext) > 0 {
 			cmdtext += ("; " + shellcmd)
 		} else {
