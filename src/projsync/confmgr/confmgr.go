@@ -172,33 +172,29 @@ func GetTaskServerAddr() string {
 }
 
 func formatConf(projconf *ProjConf) {
-	repStrMap := make(map[string] string, 0)
-	repStrMap["${Projectname}"] = projconf.Projectname
-	repStrMap["${User}"] = projconf.User
-	recurseRftObj(reflect.ValueOf(projconf), repStrMap)
+	recurseRftObj(reflect.ValueOf(projconf), "${Projectname}", projconf.Projectname)
+	recurseRftObj(reflect.ValueOf(projconf), "${User}", projconf.User)
+	recurseRftObj(reflect.ValueOf(projconf), "${Remotedir}", projconf.Remotedir)
 }
 
-func recurseRftObj(value reflect.Value, repStrMap map[string] string) {
+func recurseRftObj(value reflect.Value, srcstr, deststr string) {
 	switch value.Kind() {
 	case reflect.Ptr:
-		recurseRftObj(value.Elem(), repStrMap)
+		recurseRftObj(value.Elem(), srcstr, deststr)
 	case reflect.Struct:
 		for i := 0; i < value.NumField(); i++ {
-			recurseRftObj(value.Field(i), repStrMap)	
+			recurseRftObj(value.Field(i), srcstr, deststr)	
 		}
 	case reflect.Slice:
 		for i:= 0; i < value.Len(); i++ {
-			recurseRftObj(value.Index(i), repStrMap)
+			recurseRftObj(value.Index(i), srcstr, deststr)
 		}
 	case reflect.String:
-		value.SetString(replaceStr(value.String(), repStrMap))
+		value.SetString(replaceStr(value.String(), srcstr, deststr))
 	}
 }
 
-func replaceStr(str string, repStrMap map[string] string) string {
-	for key, value := range(repStrMap) {
-		str = strings.Replace(str, key, value, -1)
-	}
-
+func replaceStr(str, srcstr, deststr string) string {
+	str = strings.Replace(str, srcstr, deststr, -1)
 	return str
 }
