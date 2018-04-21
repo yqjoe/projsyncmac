@@ -65,9 +65,9 @@ func main() {
 			var rsp proto.RspSetAutoClose
 			err := client.Call("TaskServer.SetAutoClose", req, &rsp)
 			if err != nil {
-				fmt.Println("openautoclose fail")
+				fmt.Println("closeautoclose fail")
 			} else {
-				fmt.Println("openautoclose succ")
+				fmt.Println("closeautoclose succ")
 			}
 		} else if confname == "getautoinfo" {
 			req := &proto.ReqAutoInfo{}

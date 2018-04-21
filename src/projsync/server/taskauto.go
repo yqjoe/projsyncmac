@@ -99,7 +99,12 @@ func (auto *TaskAuto) init() {
 				tasktime := taskTime{projectname, taskconf.TaskName, time.Now().Unix(), taskconf.AutoDoTaskCircle}
 				auto.timelist = append(auto.timelist, tasktime)
 			}
+
+			if taskconf.AutoDoTask == true {
+				auto.autoclosemap[projectname] = false 
+			} else {
+				auto.autoclosemap[projectname] = true 
+			}
 		}
-		auto.autoclosemap[projectname] = false
 	}
 }
