@@ -71,6 +71,8 @@ func (task *Task) addTaskCmd(cmdconf *confmgr.CmdConf) {
 		task.addTaskSvnCmd(cmdconf)
 	case "xcopy":
 		task.addTaskXcopyCmd(cmdconf)
+	case "echo":
+		task.addTaskEchoCmd(cmdconf)
 	default:
 		fmt.Println("cmd not impl:", cmdconf.CmdName)
 	}
@@ -193,7 +195,7 @@ func (task *Task) addTaskSvnCmd(cmdconf* confmgr.CmdConf) {
 	for _, stepconf := range(cmdconf.Step) {
 		svncmd := cmd.NewSvnCmd()
 		svncmd.SetOp(stepconf.StepName)
-		svncmd.SetSvnDir(projconf.Localdir + "\\" + stepconf.Relativedir)
+		svncmd.SetSvnDir(projconf.Localdir + "/" + stepconf.Relativedir)
 		svncmd.SetUser(projconf.SvnUser)
 		svncmd.SetPassword(projconf.SvnPassword)
 
@@ -214,5 +216,20 @@ func (task *Task) addTaskXcopyCmd(cmdconf* confmgr.CmdConf) {
 		xcopycmd.SetDstDir(projconf.Localdir + "\\" + stepconf.DstRelativedir)
 
 		task.cmdlist = append(task.cmdlist, xcopycmd)
+	}
+}
+
+// echo task
+func(task *Task) addTaskEchoCmd(cmdconf* confmgr.CmdConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	for _, stepconf := range(cmdconf.Step) {
+		echocmd := cmd.NewEchoCmd()
+		echocmd.AddEchoStr(stepconf.StepName)
+
+		task.cmdlist = append(task.cmdlist, echocmd)
 	}
 }

@@ -10,12 +10,11 @@ func NewEchoCmd() *EchoCmd {
 }
 
 func (cmd *EchoCmd) GetCmdName() string {
-	return "cmd"
+	return "echo"
 }
 
 func (cmd *EchoCmd) GetCmdArgs() []string {
 	args := make([]string, 0)
-	args = append(args, "/C", "echo")
 	args = append(args, cmd.echoStrs...)
 	return args
 }
