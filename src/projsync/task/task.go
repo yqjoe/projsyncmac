@@ -75,6 +75,8 @@ func (task *Task) addTaskCmd(cmdconf *confmgr.CmdConf) {
 		task.addTaskEchoCmd(cmdconf)
 	case "rsync":
 		task.addTaskRsyncCmd(cmdconf)
+	case "ssh":
+		task.addTaskSshCmd(cmdconf)
 	default:
 		fmt.Println("cmd not impl:", cmdconf.CmdName)
 	}
@@ -202,7 +204,7 @@ func (task *Task) addTaskSvnCmd(cmdconf* confmgr.CmdConf) {
 	for _, stepconf := range(cmdconf.Step) {
 		svncmd := cmd.NewSvnCmd()
 		svncmd.SetOp(stepconf.StepName)
-		svncmd.SetSvnDir(projconf.Localdir + "/" + stepconf.Relativedir)
+		svncmd.SetSvnDir(projconf.Localdir + stepconf.Relativedir)
 		svncmd.SetUser(projconf.SvnUser)
 		svncmd.SetPassword(projconf.SvnPassword)
 
@@ -267,6 +269,8 @@ func (task *Task) addTaskRsyncStep(rsynccmd *cmd.RsyncCmd, stepconf *confmgr.Ste
 			task.addTaskRsyncPutStep(rsynccmd, stepconf)
 		case "sync":
 			task.addTaskRsyncSyncStep(rsynccmd, stepconf)
+		case "syncdst":
+			task.addTaskRsyncSyncDstStep(rsynccmd, stepconf)
 		default:
 			fmt.Println("Step Not Impl:", stepconf.StepName)
 	}
@@ -314,4 +318,54 @@ func (task *Task) addTaskRsyncSyncStep(rsynccmd *cmd.RsyncCmd, stepconf *confmgr
 	}
 	
 	rsynccmd.SetRsyncStep(syncstep)
+}
+
+func (task *Task) addTaskRsyncSyncDstStep(rsynccmd *cmd.RsyncCmd, stepconf *confmgr.StepConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	syncstep := cmd.NewRsyncStepSync()
+	syncstep.SetUser(projconf.User)
+	syncstep.SetHost(projconf.Host)
+	syncstep.SetLocalDir(MacFormatPath(projconf.Localdir + stepconf.Relativedir))
+	syncstep.SetRemoteDir(MacFormatPath(projconf.Remotedir + stepconf.DstRelativedir))
+	if stepconf.SyncDirection == "local2remote" {
+		syncstep.SetDirection(cmd.RSYNC_SYNC_DIRECTION_LOCAL_TO_REMOTE)
+	} else {
+		syncstep.SetDirection(cmd.RSYNC_SYNC_DIRECTION_REMOTE_TO_LOCAL)
+	}
+	for _, include := range(stepconf.Include) {
+		if len(include) > 0 {
+			syncstep.AddInclude(include)
+		}
+	}
+	for _, exclude := range(stepconf.Exclude) {
+		if len(exclude) > 0 {
+			syncstep.AddExclude(exclude)
+		}
+	}
+	
+	rsynccmd.SetRsyncStep(syncstep)
+}
+
+// sshtask
+func (task *Task) addTaskSshCmd(cmdconf* confmgr.CmdConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	for _, stepconf := range(cmdconf.Step) {
+		sshcmd := cmd.NewSshCmd()
+		for _, shellcmd := range(stepconf.ShellCmd) {
+			sshcmd.AddCall(shellcmd)
+			sshcmd.SetUser(projconf.User)
+			sshcmd.SetHost(projconf.Host)
+			sshcmd.SetPort(projconf.Port)
+		}
+
+		task.cmdlist = append(task.cmdlist, sshcmd)
+	}
 }
