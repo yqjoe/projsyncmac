@@ -19,10 +19,10 @@ func ExecCmd(cmd ICmd, printer io.Writer) {
 }
 
 func execCmd(printer io.Writer, cmdname string, args ...string) {
-	//fmt.Println(args)
-	//for _, arg := range(args) {
-	//	fmt.Println(arg)
-	//}
+	// fmt.Println(args)
+	for _, arg := range(args) {
+		fmt.Println(arg)
+	}
 
 	c := exec.Command(cmdname, args...)
 	//var cmderr bytes.Buffer

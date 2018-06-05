@@ -73,6 +73,8 @@ func (task *Task) addTaskCmd(cmdconf *confmgr.CmdConf) {
 		task.addTaskXcopyCmd(cmdconf)
 	case "echo":
 		task.addTaskEchoCmd(cmdconf)
+	case "rsync":
+		task.addTaskRsyncCmd(cmdconf)
 	default:
 		fmt.Println("cmd not impl:", cmdconf.CmdName)
 	}
@@ -122,14 +124,19 @@ func (task *Task) addTaskWinScpPutStep(scpcmd *cmd.WinScpCmd, stepconf *confmgr.
 	scpcmd.AddWinScpStep(putstep)
 }
 
-func FormatRemotePath(path string) string {
+func WinFormatRemotePath(path string) string {
 	// char "\" to "/"
 	return strings.Replace(path, "\\", "/", -1)
 }
 
-func FormatLocalPath(path string) string {
+func WinFormatLocalPath(path string) string {
 	// char "/" to "\"
 	return strings.Replace(path, "/", "\\", -1)
+}
+
+func MacFormatPath(path string) string {
+	// char "\" to "/"
+	return strings.Replace(path, "\\", "/", -1)
 }
 
 func (task *Task) genRemotefileFromLocalfile(localfile string) string {
@@ -140,7 +147,7 @@ func (task *Task) genRemotefileFromLocalfile(localfile string) string {
 
 	localdirlen := len(projconf.Localdir)
 	remotefile := projconf.Remotedir + localfile[localdirlen:]
-	return FormatRemotePath(remotefile)
+	return WinFormatRemotePath(remotefile)
 }
 
 func (task *Task) addTaskWinScpSyncStep(scpcmd *cmd.WinScpCmd, stepconf *confmgr.StepConf) {
@@ -150,8 +157,8 @@ func (task *Task) addTaskWinScpSyncStep(scpcmd *cmd.WinScpCmd, stepconf *confmgr
 	}
 
 	syncstep := cmd.NewWinScpStepSync()
-	syncstep.SetLocalDir(FormatLocalPath(projconf.Localdir + stepconf.Relativedir))
-	syncstep.SetRemoteDir(FormatRemotePath(projconf.Remotedir + stepconf.Relativedir))
+	syncstep.SetLocalDir(WinFormatLocalPath(projconf.Localdir + stepconf.Relativedir))
+	syncstep.SetRemoteDir(WinFormatRemotePath(projconf.Remotedir + stepconf.Relativedir))
 	if stepconf.SyncDirection == "local2remote" {
 		syncstep.SetDirection(cmd.WIN_SCP_SYNC_DIRECTION_LOCAL_TO_REMOTE)
 	} else {
@@ -220,7 +227,7 @@ func (task *Task) addTaskXcopyCmd(cmdconf* confmgr.CmdConf) {
 }
 
 // echo task
-func(task *Task) addTaskEchoCmd(cmdconf* confmgr.CmdConf) {
+func (task *Task) addTaskEchoCmd(cmdconf* confmgr.CmdConf) {
 	projconf := confmgr.GetProjectConf(task.ProjectName)
 	if nil == projconf {
 		return
@@ -232,4 +239,79 @@ func(task *Task) addTaskEchoCmd(cmdconf* confmgr.CmdConf) {
 
 		task.cmdlist = append(task.cmdlist, echocmd)
 	}
+}
+
+// rsync task
+func (task *Task) addTaskRsyncCmd(cmdconf* confmgr.CmdConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+	
+	for _, stepconf := range(cmdconf.Step) {
+		rsynccmd := cmd.NewRsyncCmd()
+		
+		rsynccmd.SetUser(projconf.User)
+		rsynccmd.SetPassword(projconf.Password)
+		rsynccmd.SetHost(projconf.Host)
+		rsynccmd.SetPort(projconf.Port)
+		task.addTaskRsyncStep(rsynccmd, &stepconf)
+
+		task.cmdlist = append(task.cmdlist, rsynccmd)
+	}
+}
+
+func (task *Task) addTaskRsyncStep(rsynccmd *cmd.RsyncCmd, stepconf *confmgr.StepConf) {
+	switch stepconf.StepName {
+		case "put":
+			task.addTaskRsyncPutStep(rsynccmd, stepconf)
+		case "sync":
+			task.addTaskRsyncSyncStep(rsynccmd, stepconf)
+		default:
+			fmt.Println("Step Not Impl:", stepconf.StepName)
+	}
+}
+
+func (task *Task) addTaskRsyncPutStep(rsynccmd *cmd.RsyncCmd, stepconf *confmgr.StepConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	putstep := cmd.NewRsyncStepPutFile()
+	putstep.SetUser(projconf.User)
+	putstep.SetHost(projconf.Host)
+	putstep.SetLocalfile(task.putstepfile)
+	putstep.SetRemotefile(task.genRemotefileFromLocalfile(task.putstepfile))
+	rsynccmd.SetRsyncStep(putstep)
+}
+
+func (task *Task) addTaskRsyncSyncStep(rsynccmd *cmd.RsyncCmd, stepconf *confmgr.StepConf) {
+	projconf := confmgr.GetProjectConf(task.ProjectName)
+	if nil == projconf {
+		return
+	}
+
+	syncstep := cmd.NewRsyncStepSync()
+	syncstep.SetUser(projconf.User)
+	syncstep.SetHost(projconf.Host)
+	syncstep.SetLocalDir(MacFormatPath(projconf.Localdir + stepconf.Relativedir))
+	syncstep.SetRemoteDir(MacFormatPath(projconf.Remotedir + stepconf.Relativedir))
+	if stepconf.SyncDirection == "local2remote" {
+		syncstep.SetDirection(cmd.RSYNC_SYNC_DIRECTION_LOCAL_TO_REMOTE)
+	} else {
+		syncstep.SetDirection(cmd.RSYNC_SYNC_DIRECTION_REMOTE_TO_LOCAL)
+	}
+	for _, include := range(stepconf.Include) {
+		if len(include) > 0 {
+			syncstep.AddInclude(include)
+		}
+	}
+	for _, exclude := range(stepconf.Exclude) {
+		if len(exclude) > 0 {
+			syncstep.AddExclude(exclude)
+		}
+	}
+	
+	rsynccmd.SetRsyncStep(syncstep)
 }
