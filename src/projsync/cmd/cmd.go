@@ -27,6 +27,7 @@ func execCmd(printer io.Writer, cmdname string, args ...string) {
 	c := exec.Command(cmdname, args...)
 	//var cmderr bytes.Buffer
 	c.Stdout = printer 
+	c.Stderr = printer
 	//c.Stderr = &cmderr
 
 	if err := c.Run(); err != nil {
