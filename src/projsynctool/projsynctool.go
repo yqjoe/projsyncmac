@@ -103,7 +103,16 @@ func main() {
 		if conf.TaskPrinter == "yes" {
 			closechan := make(chan int, 1)
 
+			// printersvr address
 			req.SyncToolPrintSvrAddr = genLocalAttr()
+
+			// printersvr goroutine
+			printersvr := server.NewPrinterServer(req.SyncToolPrintSvrAddr, closechan)
+			go printersvr.Serve()
+
+			// sleep 200 ms to wait for printersvr ready
+			time.Sleep(200 * time.Millisecond)
+
 			atcall := client.Go("TaskServer.AddTask", req, &rsp, nil)
 
 			//  wait remote call goroutine
@@ -119,10 +128,6 @@ func main() {
 					closechan <- 1
 				}
 			}()
-
-			// printersvr goroutine
-			printersvr := server.NewPrinterServer(req.SyncToolPrintSvrAddr, closechan)
-			go printersvr.Serve()
 
 			// close
 			<-closechan
